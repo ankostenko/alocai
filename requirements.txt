@@ -1,0 +1,19 @@
+Flask==0.10.1
+
+# Locking some Flask dependencies to make them work with our version of flask.
+werkzeug==0.14.1
+itsdangerous==1.1.0
+
+# Templating library
+jinja2==3.0.3
+
+# Application server.
+gunicorn==19.4.5
+
+# Testing and static analysis.
+pytest==5.1.0
+pytest-cov==2.7.1
+flake8==3.7.8
+
+# CLI.
+Click==6.4
