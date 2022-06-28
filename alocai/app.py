@@ -1,13 +1,13 @@
 import io
 import json
 import tempfile
-from flask import Flask, request, flash, send_file
+from flask import Flask, request, send_file
 import csv
 from .transforms import OUTPUT_COLUMNS, OUTPUT_HEADERS, COLUMN_NAME_TO_POSITION
 from datetime import datetime
 
 
-def parse_file(file) -> list:
+def _parse_file(file) -> list:
     """Parses provided file from request 
 
     Args:
@@ -46,7 +46,7 @@ def is_csv(filename: str) -> bool:
     return split[1].lower() == 'csv'
 
 
-def _fill_corrected_data(parsed_rows):
+def _fill_corrected_data(parsed_rows, app):
     """_summary_
 
     Args:
@@ -58,10 +58,14 @@ def _fill_corrected_data(parsed_rows):
     if len(OUTPUT_COLUMNS) < len(parsed_rows[0]):
         return "Error"
 
+    # Output list
     output = []
 
-    for row in parsed_rows:
+
+    for row_index in range(len(parsed_rows)):
+        row = parsed_rows[row_index]
         output_row = []
+        evict_row = False
         for index in range(len(OUTPUT_COLUMNS)):
             column_data = row[index]
 
@@ -71,30 +75,43 @@ def _fill_corrected_data(parsed_rows):
                     column_data = transform_function(column_data)
                 output_row.append(column_data)
             except Exception as ex:
-                flash("Exception: ", ex)
+                # If error occurred while transforming data we evicting
+                # current row entirely 
+                evict_row = True
+                app.logger.error(f'[Error]: {ex}')
 
-        copies_sold = row[COLUMN_NAME_TO_POSITION["Copies Sold"]]
-        copy_price = row[COLUMN_NAME_TO_POSITION["Copy Price"]]
+        if evict_row:
+            app.logger.warn(f'Evicting row at index {row_index}')
+            continue
+        
+        try:
+            copies_sold = row[COLUMN_NAME_TO_POSITION["Copies Sold"]]
+            copy_price = row[COLUMN_NAME_TO_POSITION["Copy Price"]]
 
-        # Assuming that price of copy in the format: <numeric_price> <currency>
-        split_price = copy_price.split(' ')
-        currency = " " + split_price[1]
-        price = float(split_price[0])
+            # Assuming that price of copy in the format: <numeric_price> <currency>
+            split_price = copy_price.split(' ')
+            currency = " " + split_price[1]
+            price = float(split_price[0])
 
-        total_revenue = round(int(copies_sold) * price)
-        output_row.append(str(total_revenue) + currency)
+            total_revenue = round(int(copies_sold) * price)
+            output_row.append(str(total_revenue) + currency)
 
-        output.append(output_row)
+            output.append(output_row)
+        except Exception as ex:
+            app.logger.error(
+                f"Couldn't calculate total revenue at index {row_index}." +
+                " Evicting the row")
 
     output.sort(key=lambda row: datetime.strptime(
         row[COLUMN_NAME_TO_POSITION["Release Date"]], "%d.%m.%Y"))
 
+    # Insert headers
     output.insert(0, OUTPUT_HEADERS)
 
     return output
 
 
-def _upload():
+def _upload(app):
     """Implementation of upload method
 
     Returns:
@@ -102,12 +119,12 @@ def _upload():
     """
     # Check if user provided an input file
     if not request.files:
-        flash('No input file provided')
+        app.logger.error('No input file provided')
         return 'No input file provided', 500
 
     # Check if request contains 'file' part
     if 'file' not in request.files:
-        flash('No file part provided')
+        app.logger.error('No file part provided')
         return "No file part. Example: curl -F 'file=...'", 500
 
     # Get file from the request
@@ -115,19 +132,19 @@ def _upload():
 
     # Check if file was actually attached to request
     if file.filename == '':
-        flash('No file attached')
+        app.logger.error('No file attached')
         return 'No file attached', 500
 
     # Check if filename contains '.csv' extension
     if not is_csv(file.filename):
-        flash('Provided file is not a .csv file')
+        app.logger.error('Provided file is not a .csv file')
         return 'Provided file is not a .csv file', 500
 
     # Parses file
-    parsed_rows = parse_file(file)
+    parsed_rows = _parse_file(file)
 
     # Correct data and fill lists
-    result = _fill_corrected_data(parsed_rows)
+    result = _fill_corrected_data(parsed_rows, app)
 
     # Writing data to temporary file
     with tempfile.TemporaryFile(mode='a+') as csv_file:
@@ -163,6 +180,6 @@ def create_app(settings_override=None):
         Accepts a file and parses.
         :return: 
         """
-        return _upload()
+        return _upload(app)
 
     return app
