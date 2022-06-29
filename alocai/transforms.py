@@ -1,6 +1,5 @@
 from .consts import ALPHA3_TO_COUNTRY_NAME
 from datetime import datetime
-from flask import flash
 
 
 def _release_date_transform(input_date: str) -> str:
@@ -45,7 +44,6 @@ def _country_name_transform(input_code: str) -> str:
         str: Country full name
     """
     if input_code not in ALPHA3_TO_COUNTRY_NAME:
-        flash(f"Unkown contry code provided {input_code}")
         return "UNKNOWN COUNTRY"
 
     return ALPHA3_TO_COUNTRY_NAME[input_code]

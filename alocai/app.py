@@ -61,7 +61,6 @@ def _fill_corrected_data(parsed_rows, app):
     # Output list
     output = []
 
-
     for row_index in range(len(parsed_rows)):
         row = parsed_rows[row_index]
         output_row = []
@@ -76,14 +75,14 @@ def _fill_corrected_data(parsed_rows, app):
                 output_row.append(column_data)
             except Exception as ex:
                 # If error occurred while transforming data we evicting
-                # current row entirely 
+                # current row entirely
                 evict_row = True
                 app.logger.error(f'[Error]: {ex}')
 
         if evict_row:
             app.logger.warn(f'Evicting row at index {row_index}')
             continue
-        
+
         try:
             copies_sold = row[COLUMN_NAME_TO_POSITION["Copies Sold"]]
             copy_price = row[COLUMN_NAME_TO_POSITION["Copy Price"]]
