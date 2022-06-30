@@ -6,7 +6,7 @@ Alocai technical assignment.
 
 To run the assignment you'll need **docker**, **docker-compose** and **curl**.
 
-From root directory of the project run command
+From the root directory of the project, run the command.
 
 ```sh
 docker-compose up --build
@@ -14,7 +14,9 @@ docker-compose up --build
 
 # To see if it works
 
-Run command
+You'll need a file with data in this repo located in folder data.
+
+Run command.
 
 ```sh
 curl -F "file=@data/data.csv" localhost:8000/upload
