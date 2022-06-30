@@ -17,7 +17,7 @@ docker-compose up --build
 Run command
 
 ```sh
-curl -F 'file=@data/data.csv' localhost:8000/upload
+curl -F "file=@data/data.csv" localhost:8000/upload
 ```
 
 # Run tests
